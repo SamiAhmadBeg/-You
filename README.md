@@ -1,6 +1,8 @@
 <div align="center">
 
-# !YOU
+<a href="https://you-production-6246.up.railway.app/">
+    <img src="https://github.com/SamiAhmadBeg/-You/raw/main/public/!Y.png" alt="YOU Logo" width="220" />
+</a>
 
 ### *Not you picking up, so YOU don't miss what matters!*
 
@@ -34,38 +36,46 @@ Experience real-time AI conversations powered by cutting-edge speech and languag
 
 <table>
 <tr>
-<td width="50%">
+<td width="50%" valign="top">
 
-### **Intelligent Conversations**
-- Real-time speech recognition with **AssemblyAI**
-- Natural language processing via **OpenAI GPT-4o-mini**
-- Context-aware responses
+### Intelligent Conversations
+
+- Real-time speech recognition
+- Natural language processing via **OpenAI**
+- Context-aware, streaming responses
+- Adjustable personality and behavior
 
 </td>
-<td width="50%">
+<td width="50%" valign="top">
 
-### **Neural Voice Synthesis**
+### Neural Voice Synthesis
+
 - High-fidelity TTS with **Fish Audio**
 - OpenAI TTS fallback
 - Custom voice cloning support
+- Emotion and style control capable
 
 </td>
 </tr>
 <tr>
-<td>
+<td valign="top">
 
-### **Call Management**
+### Call Management
+
 - Live call monitoring dashboard
 - Complete conversation transcripts
 - AI-generated call summaries
+- Call history and status tracking
 
 </td>
-<td>
+<td valign="top">
 
-### **Real-Time Streaming**
+### Real-Time Streaming
+
 - WebSocket-based audio streaming
 - Low-latency voice processing
 - Seamless Twilio integration
+- Robust audio conversion pipeline
 
 </td>
 </tr>
@@ -73,7 +83,7 @@ Experience real-time AI conversations powered by cutting-edge speech and languag
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────┐
@@ -112,9 +122,9 @@ Experience real-time AI conversations powered by cutting-edge speech and languag
                      │
                      ↓
               Back to Caller
-```
 
-### Audio Pipeline
+```
+## Audio Pipeline
 
 ```
        Twilio (mulaw 8kHz) → PCM 16kHz → AssemblyAI (STT)
@@ -138,7 +148,6 @@ Fish Audio/OpenAI TTS → PCM 24kHz → Downsample 8kHz → mulaw → Twilio
 - **npm** 10+ (comes with Node.js)
 - **API Keys**:
   - [OpenAI](https://platform.openai.com/api-keys)
-  - [AssemblyAI](https://www.assemblyai.com/app)
   - [Fish Audio](https://fish.audio/)
   - [Twilio](https://console.twilio.com/)
 
@@ -233,7 +242,6 @@ RAILWAY_PUBLIC_DOMAIN=your-app.up.railway.app
 </td>
 <td>
 • OpenAI GPT-4o-mini<br/>
-• AssemblyAI Universal-2<br/>
 • Fish Audio TTS<br/>
 • Custom Audio Pipeline
 </td>
@@ -256,7 +264,6 @@ RAILWAY_PUBLIC_DOMAIN=your-app.up.railway.app
 | `/api/media-stream` | WebSocket | Real-time audio streaming |
 | `/api/calls` | GET | Retrieve call history |
 | `/api/tts` | POST | Text-to-speech synthesis |
-| `/api/test-assemblyai` | GET | Test AssemblyAI connection |
 | `/api/test-openai` | GET | Test OpenAI connection |
 | `/api/test-fish` | GET | Test Fish Audio connection |
 
@@ -288,15 +295,6 @@ Visit these pages in your browser:
 - Ensure TTS returns PCM format (not MP3)
 - Verify sample rate conversions: 24kHz → 8kHz
 - Check `audioToTwilio()` receives correct sample rate parameter
-
-</details>
-
-<details>
-<summary><b>AssemblyAI connection fails</b></summary>
-
-- Verify API key is valid and has credits
-- Check API key has real-time streaming permissions
-- Ensure using Universal-2 model (default in SDK v4+)
 
 </details>
 
