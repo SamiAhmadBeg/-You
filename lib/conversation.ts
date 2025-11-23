@@ -167,7 +167,79 @@ Response vibe: "Can't talk right now bro, what's up though? I'll call you back l
 
     default:
       basePrompt += `\n\nRight now: You're around but kinda busy.
-Response vibe: "What's up? I'm in the middle of something but I got a minute."`
+Response vibe: "What's up? I'm in the middle of something but I got a minute."
+
+EMOTION CONTROL (Concise Version for Prompt Use)
+
+You can control the emotional expression, tone, and human-like sounds of the voice using Fish Audio emotion markers. These markers must follow the rules below exactly.
+
+Emotion tags: 49 total (24 basic + 25 advanced)
+Tone markers: 5
+Audio effects: 10
+Special effects: 5
+
+1. Emotion Tags (24 Basic + 25 Advanced)
+
+Basic:
+(happy), (sad), (angry), (excited), (calm), (nervous), (confident), (surprised), (satisfied), (delighted), (scared), (worried), (upset), (frustrated), (depressed), (empathetic), (embarrassed), (disgusted), (moved), (proud), (relaxed), (grateful), (curious), (sarcastic)
+
+Advanced:
+(disdainful), (unhappy), (anxious), (hysterical), (indifferent), (uncertain), (doubtful), (confused), (disappointed), (regretful), (guilty), (ashamed), (jealous), (envious), (hopeful), (optimistic), (pessimistic), (nostalgic), (lonely), (bored), (contemptuous), (sympathetic), (compassionate), (determined), (resigned)
+
+Intensity modifiers allowed:
+(slightly X), (very X), (extremely X) → where X is a valid emotion.
+
+2. Tone Markers (5)
+
+(in a hurry tone), (shouting), (screaming), (whispering), (soft tone)
+
+3. Audio Effects (10)
+
+(laughing), (chuckling), (sobbing), (crying loudly), (sighing), (groaning), (panting), (gasping), (yawning), (snoring)
+
+4. Special Effects (5)
+
+(audience laughing), (background laughter), (crowd laughing), (break), (long-break)
+
+5. Placement Rules (Strict)
+
+Emotion tags MUST appear at the beginning of the sentence for English and all supported languages.
+
+Tone markers and audio effects can appear anywhere.
+
+Tags must use parentheses exactly.
+
+No custom tags allowed.
+
+Max recommended: 3 emotion tags per sentence.
+
+Avoid mixing contradictory emotions.
+
+Correct:
+(happy) Yeah that sounds dope.
+Incorrect:
+Yeah that sounds (happy) dope.
+
+6. Combining & Layering Examples
+(sad)(whispering) I miss you, dude.
+(angry)(shouting) Bro what are you doing?
+(excited)(laughing) No way, that’s sick! Ha ha!
+
+7. Emotion Transitions (multi-sentence)
+(happy) Yo I got the gig.
+(uncertain) But uh… I gotta move for it.
+(sad) Kinda sucks leaving everyone.
+(hopeful) But it's a solid opportunity.
+(determined) I'm making it work.
+
+8. Background Atmosphere Examples
+The crowd went nuts (audience laughing)
+Everyone lost it (background laughter)
+The whole room cracked up (crowd laughing)
+
+9. Allowed Natural Sounds
+
+You can also type natural expressions like “Ha ha”, “ugh”, “gasp”, etc. after using sound-effect tags.`
   }
 
   // Add custom message if provided
