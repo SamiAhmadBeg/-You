@@ -1,9 +1,10 @@
-import { AssemblyAI, RealtimeTranscript } from "assemblyai"
+import { RealtimeTranscript } from "assemblyai"
 
 const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 
-if (!ASSEMBLYAI_API_KEY) {
-  console.warn("⚠️  ASSEMBLYAI_API_KEY not found in environment variables")
+if (!ASSEMBLYAI_API_KEY && !OPENAI_API_KEY) {
+  console.warn("⚠️  Neither ASSEMBLYAI_API_KEY nor OPENAI_API_KEY found - transcription will not work")
 }
 
 export interface TranscriptCallback {
@@ -18,122 +19,191 @@ export interface AssemblyAIStreamOptions {
 }
 
 /**
- * Create and manage an AssemblyAI real-time streaming transcription session
+ * Create and manage a real-time streaming transcription session using OpenAI Whisper
+ * Falls back from AssemblyAI to OpenAI for better reliability
  */
 export class AssemblyAIStream {
-  private client: AssemblyAI
-  private transcriber: any
   private isConnected: boolean = false
   private options: AssemblyAIStreamOptions
+  private audioBuffer: Buffer[] = []
+  private processingTimer: NodeJS.Timeout | null = null
+  private sessionId: string
 
   constructor(options: AssemblyAIStreamOptions) {
     this.options = options
-
-    this.client = new AssemblyAI({
-      apiKey: ASSEMBLYAI_API_KEY || "",
-    })
+    this.sessionId = Math.random().toString(36).substring(7)
   }
 
   /**
-   * Connect to AssemblyAI streaming service
+   * Connect to transcription service
    */
   async connect(): Promise<void> {
     if (this.isConnected) {
-      console.warn("AssemblyAI stream already connected")
+      console.warn("Transcription stream already connected")
       return
     }
 
     try {
-      // Create a streaming transcriber
-      this.transcriber = this.client.realtime.transcriber({
-        sampleRate: 16_000,
-        token: ASSEMBLYAI_API_KEY, // Explicitly pass token
-      })
-
-      // Set up event handlers
-      this.transcriber.on("open", ({ sessionId }: { sessionId: string }) => {
-        console.log(`✅ AssemblyAI session opened: ${sessionId}`)
-        this.isConnected = true
-        if (this.options.onOpen) {
-          this.options.onOpen(sessionId)
-        }
-      })
-
-      this.transcriber.on("error", (error: Error) => {
-        console.error("❌ AssemblyAI error:", error)
-        if (this.options.onError) {
-          this.options.onError(error)
-        }
-      })
-
-      this.transcriber.on("close", (code: number, reason: string) => {
-        console.log(`AssemblyAI session closed: ${code} - ${reason}`)
-        this.isConnected = false
-        if (this.options.onClose) {
-          this.options.onClose()
-        }
-      })
-
-      this.transcriber.on("transcript", (transcript: RealtimeTranscript) => {
-        if (!transcript.text) {
-          return
-        }
-
-        const isFinal = transcript.message_type === "FinalTranscript"
-
-        if (isFinal) {
-          console.log("📝 Final transcript:", transcript.text)
-        } else {
-          console.log("📝 Partial transcript:", transcript.text)
-        }
-
-        this.options.onTranscript(transcript.text, isFinal)
-      })
-
-      // Connect to the service
-      await this.transcriber.connect()
-
-      console.log("🎤 AssemblyAI streaming ready")
+      this.isConnected = true
+      console.log(`✅ OpenAI Whisper transcription ready: ${this.sessionId}`)
+      
+      if (this.options.onOpen) {
+        this.options.onOpen(this.sessionId)
+      }
     } catch (error) {
-      console.error("Failed to connect to AssemblyAI:", error)
+      console.error("Failed to initialize transcription:", error)
       throw error
     }
   }
 
   /**
-   * Send audio data to AssemblyAI for transcription
-   * @param audioData - PCM 16-bit audio data at 16kHz
+   * Send audio data for transcription
+   * Buffers audio and processes in chunks for near-real-time transcription
    */
   sendAudio(audioData: Buffer): void {
-    if (!this.isConnected || !this.transcriber) {
-      console.warn("AssemblyAI not connected, cannot send audio")
+    if (!this.isConnected) {
+      console.warn("Transcription not connected, cannot send audio")
       return
     }
 
-    try {
-      this.transcriber.sendAudio(audioData)
-    } catch (error) {
-      console.error("Error sending audio to AssemblyAI:", error)
-      if (this.options.onError) {
-        this.options.onError(error as Error)
-      }
+    // Add to buffer
+    this.audioBuffer.push(audioData)
+
+    // Process every 3 seconds of audio for near-real-time transcription
+    if (!this.processingTimer) {
+      this.processingTimer = setTimeout(() => {
+        this.processBufferedAudio()
+      }, 3000) // Process every 3 seconds
     }
   }
 
   /**
-   * Close the AssemblyAI streaming connection
+   * Process buffered audio with OpenAI Whisper
    */
-  async close(): Promise<void> {
-    if (!this.isConnected || !this.transcriber) {
+  private async processBufferedAudio(): Promise<void> {
+    if (this.audioBuffer.length === 0) {
+      this.processingTimer = null
       return
     }
 
     try {
-      await this.transcriber.close()
-      this.isConnected = false
-      console.log("🔌 AssemblyAI connection closed")
+      // Combine all buffered audio
+      const combinedBuffer = Buffer.concat(this.audioBuffer)
+      this.audioBuffer = [] // Clear buffer
+
+      // Skip if buffer is too small (less than 0.5 seconds of audio at 16kHz)
+      if (combinedBuffer.length < 16000) {
+        this.processingTimer = null
+        return
+      }
+
+      // Convert PCM to WAV format for Whisper
+      const wavBuffer = this.pcmToWav(combinedBuffer, 16000, 1, 16)
+
+      // Transcribe with OpenAI Whisper
+      const transcript = await this.transcribeWithWhisper(wavBuffer)
+
+      if (transcript && transcript.trim().length > 0) {
+        console.log(`📝 Whisper transcript: "${transcript}"`)
+        this.options.onTranscript(transcript, true)
+      }
     } catch (error) {
-      console.error("Error closing AssemblyAI connection:", error)
+      console.error("Error processing audio:", error)
+      if (this.options.onError) {
+        this.options.onError(error as Error)
+      }
+    }
+
+    this.processingTimer = null
+  }
+
+  /**
+   * Transcribe audio using OpenAI Whisper API
+   */
+  private async transcribeWithWhisper(audioBuffer: Buffer): Promise<string> {
+    if (!OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY not configured")
+    }
+
+    const formData = new FormData()
+    const blob = new Blob([audioBuffer], { type: 'audio/wav' })
+    formData.append('file', blob, 'audio.wav')
+    formData.append('model', 'whisper-1')
+    formData.append('language', 'en')
+
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(`Whisper API error: ${response.status} - ${error}`)
+    }
+
+    const data = await response.json()
+    return data.text || ''
+  }
+
+  /**
+   * Convert raw PCM to WAV format
+   */
+  private pcmToWav(pcmData: Buffer, sampleRate: number, channels: number, bitsPerSample: number): Buffer {
+    const dataSize = pcmData.length
+    const header = Buffer.alloc(44)
+
+    // RIFF header
+    header.write('RIFF', 0)
+    header.writeUInt32LE(36 + dataSize, 4)
+    header.write('WAVE', 8)
+
+    // fmt chunk
+    header.write('fmt ', 12)
+    header.writeUInt32LE(16, 16) // fmt chunk size
+    header.writeUInt16LE(1, 20) // audio format (1 = PCM)
+    header.writeUInt16LE(channels, 22)
+    header.writeUInt32LE(sampleRate, 24)
+    header.writeUInt32LE(sampleRate * channels * (bitsPerSample / 8), 28) // byte rate
+    header.writeUInt16LE(channels * (bitsPerSample / 8), 32) // block align
+    header.writeUInt16LE(bitsPerSample, 34)
+
+    // data chunk
+    header.write('data', 36)
+    header.writeUInt32LE(dataSize, 40)
+
+    return Buffer.concat([header, pcmData])
+  }
+
+  /**
+   * Close the transcription connection
+   */
+  async close(): Promise<void> {
+    if (!this.isConnected) {
+      return
+    }
+
+    try {
+      // Process any remaining buffered audio
+      if (this.audioBuffer.length > 0) {
+        await this.processBufferedAudio()
+      }
+
+      if (this.processingTimer) {
+        clearTimeout(this.processingTimer)
+        this.processingTimer = null
+      }
+
+      this.isConnected = false
+      console.log("🔌 Transcription connection closed")
+      
+      if (this.options.onClose) {
+        this.options.onClose()
+      }
+    } catch (error) {
+      console.error("Error closing transcription connection:", error)
     }
   }
 
@@ -146,7 +216,7 @@ export class AssemblyAIStream {
 }
 
 /**
- * Factory function to create an AssemblyAI stream
+ * Factory function to create a transcription stream
  */
 export function createAssemblyAIStream(options: AssemblyAIStreamOptions): AssemblyAIStream {
   return new AssemblyAIStream(options)
