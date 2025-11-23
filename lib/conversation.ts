@@ -182,6 +182,16 @@ Response vibe: "What's up? I'm in the middle of something but I got a minute."`
  * Generate a dynamic greeting for incoming calls
  */
 export async function generateDynamicGreeting(callId: string, from: string): Promise<string> {
+  // Check if there's a custom message set
+  const { customMessage } = getState()
+  
+  // If custom message exists, use it directly (no ChatGPT)
+  if (customMessage && customMessage.trim()) {
+    console.log(`📝 Using custom message: "${customMessage}"`)
+    return customMessage.trim()
+  }
+
+  // Otherwise, generate dynamic greeting with ChatGPT
   if (!OPENAI_API_KEY) {
     return "Yo, Sami here. What's up?"
   }
