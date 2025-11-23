@@ -1,55 +1,15 @@
-import { type NextRequest } from "next/server"
-import { WebSocketServer, WebSocket } from "ws"
-import { createServer } from "http"
-import { createSession, getSession, endSession, updateSession } from "@/lib/call-session"
-import { createAssemblyAIStream } from "@/lib/assemblyai-stream"
-import { twilioToAssemblyAI, audioToTwilio } from "@/lib/audio-converter"
-import { processUtterance, generateCallSummary } from "@/lib/conversation"
-import { synthesizeSpeech } from "@/lib/fish-audio"
-import { addCallLog } from "@/lib/state"
-
-export const runtime = "nodejs"
-
-// Create WebSocket server (this runs once when the route is loaded)
-const wss = new WebSocketServer({ noServer: true })
+import { WebSocket } from "ws"
+import { createSession, getSession, endSession, updateSession, addMessage } from "./call-session"
+import { createAssemblyAIStream } from "./assemblyai-stream"
+import { twilioToAssemblyAI, audioToTwilio } from "./audio-converter"
+import { processUtterance, generateCallSummary } from "./conversation"
+import { synthesizeSpeech } from "./fish-audio"
+import { addCallLog } from "./state"
 
 /**
- * Handle WebSocket upgrade for Twilio Media Streams
+ * Handle Twilio WebSocket connection
  */
-export async function GET(req: NextRequest) {
-  const { socket, response } = await upgradeWebSocket(req)
-  return response
-}
-
-/**
- * Upgrade HTTP connection to WebSocket
- */
-async function upgradeWebSocket(req: NextRequest) {
-  return new Promise<{ socket: WebSocket; response: Response }>((resolve) => {
-    // Extract the underlying Node.js request and socket
-    const server = createServer()
-
-    wss.handleUpgrade(req as any, (req as any).socket, Buffer.alloc(0), (ws: WebSocket) => {
-      console.log("🔌 WebSocket connection established")
-
-      // Handle the WebSocket connection
-      handleWebSocketConnection(ws)
-
-      resolve({
-        socket: ws,
-        response: new Response(null, {
-          status: 101,
-          statusText: "Switching Protocols",
-        }),
-      })
-    })
-  })
-}
-
-/**
- * Handle individual WebSocket connection from Twilio
- */
-function handleWebSocketConnection(ws: WebSocket) {
+export function handleTwilioWebSocket(ws: WebSocket, request: any) {
   let callId: string | null = null
   let streamSid: string | null = null
 
@@ -115,35 +75,27 @@ async function handleStart(ws: WebSocket, msg: any) {
   const assemblyAIStream = createAssemblyAIStream({
     onTranscript: async (transcript: string, isFinal: boolean) => {
       if (!isFinal) {
-        // Partial transcripts - log but don't process
         return
       }
 
-      // Final transcript - process with LLM
       console.log(`📝 Final transcript from caller: "${transcript}"`)
 
       try {
-        // Generate AI response
         const aiResponse = await processUtterance(callSid, transcript)
 
         if (!aiResponse) {
-          return // Skip if already processing
+          return
         }
 
         console.log(`🤖 AI response: "${aiResponse}"`)
 
-        // Convert AI response to speech using Fish Audio
         const audioBuffer = await synthesizeSpeech(aiResponse)
-
-        // Convert to Twilio format (mulaw, 8kHz, base64)
         const twilioAudio = audioToTwilio(audioBuffer, 8000)
 
-        // Send audio back to caller via WebSocket
         sendAudioToTwilio(ws, streamSid, twilioAudio)
       } catch (error) {
         console.error("Error processing transcript:", error)
 
-        // Send error message to caller
         try {
           const fallbackAudio = await synthesizeSpeech(
             "I'm sorry, I'm having technical difficulties. Please try again later."
@@ -166,21 +118,15 @@ async function handleStart(ws: WebSocket, msg: any) {
     },
   })
 
-  // Connect to AssemblyAI
   await assemblyAIStream.connect()
-
-  // Store in session
   updateSession(callSid, { assemblyAIStream })
 
-  // Send a greeting to the caller
   try {
     const greeting = "Hi, this is your AI assistant. How can I help you today?"
     const greetingAudio = await synthesizeSpeech(greeting)
     const twilioAudio = audioToTwilio(greetingAudio, 8000)
     sendAudioToTwilio(ws, streamSid, twilioAudio)
 
-    // Add greeting to conversation history
-    const { addMessage } = await import("@/lib/call-session")
     addMessage(callSid, "assistant", greeting)
   } catch (error) {
     console.error("Error sending greeting:", error)
@@ -197,13 +143,8 @@ async function handleMedia(callId: string, msg: any) {
   }
 
   try {
-    // Get audio payload from Twilio (base64-encoded mulaw)
     const audioPayload = msg.media.payload
-
-    // Convert Twilio audio to AssemblyAI format (PCM 16-bit, 16kHz)
     const pcmAudio = twilioToAssemblyAI(audioPayload)
-
-    // Send to AssemblyAI for transcription
     session.assemblyAIStream.sendAudio(pcmAudio)
   } catch (error) {
     console.error("Error processing media:", error)
@@ -217,23 +158,20 @@ async function handleStop(callId: string) {
   console.log(`📴 Call ended: ${callId}`)
 
   try {
-    // Generate call summary
     const summary = await generateCallSummary(callId)
-
     const session = getSession(callId)
+    
     if (session) {
-      // Add to call log
       addCallLog({
         id: callId,
         from: session.callerPhone,
         time: session.startTime.toISOString(),
-        modeAtTime: "normal", // TODO: Get actual mode at call time
+        modeAtTime: "normal",
         summary,
         action: "completed",
       })
     }
 
-    // End session
     await endSession(callId)
   } catch (error) {
     console.error("Error handling call stop:", error)
@@ -244,7 +182,6 @@ async function handleStop(callId: string) {
  * Send audio to Twilio via WebSocket
  */
 function sendAudioToTwilio(ws: WebSocket, streamSid: string, base64Audio: string) {
-  // Split audio into chunks (Twilio recommends ~20ms chunks = ~320 bytes for mulaw @ 8kHz)
   const chunkSize = 320
   const audioBuffer = Buffer.from(base64Audio, "base64")
 
