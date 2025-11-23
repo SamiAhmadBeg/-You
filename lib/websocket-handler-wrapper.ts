@@ -122,7 +122,7 @@ async function handleStart(ws: WebSocket, msg: any): Promise<void> {
   updateSession(callSid, { assemblyAIStream })
 
   try {
-    const greeting = "Hi, this is your AI assistant. How can I help you today?"
+    const greeting = "Hey! Sami here. What's up?"
     const greetingAudio = await synthesizeSpeech(greeting)
     const twilioAudio = audioToTwilio(greetingAudio, 8000)
     sendAudioToTwilio(ws, streamSid, twilioAudio)
