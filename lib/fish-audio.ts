@@ -24,13 +24,17 @@ export async function synthesizeSpeech(text: string): Promise<Buffer> {
   // Try Fish Audio first (better quality)
   if (FISH_API_KEY) {
     try {
+      console.log("🎵 Attempting Fish Audio TTS...")
       return await synthesizeWithFishAudio(text)
     } catch (error) {
-      console.error("Fish Audio TTS failed, falling back to OpenAI:", error)
+      console.error("❌ Fish Audio TTS failed, falling back to OpenAI:", error)
     }
+  } else {
+    console.log("⚠️ FISH_API_KEY not set, using OpenAI TTS")
   }
 
   // Fallback to OpenAI TTS
+  console.log("🔄 Using OpenAI TTS fallback")
   return await synthesizeWithOpenAI(text)
 }
 
