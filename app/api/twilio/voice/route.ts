@@ -46,12 +46,18 @@ export async function POST(req: NextRequest) {
 
   console.log(`🎵 Greeting audio URL: ${audioUrl}`)
 
+  // Generate a Fish Audio response for the timeout fallback
+  const timeoutAudio = await synthesizeSpeech("Hey, you still there? Give me a call back if you need me!")
+  const timeoutAudioId = storeAudio(timeoutAudio.pcmData)
+  const timeoutUrl = `${baseUrl}/api/tts-audio/${timeoutAudioId}`
+
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
     <Response>
       <Gather input="speech" action="${baseUrl}/api/twilio/gather" speechTimeout="auto" language="en-US">
         <Play>${audioUrl}</Play>
       </Gather>
-      <Say voice="Polly.Matthew-Neural">Sorry, I didn't catch that. Please call back.</Say>
+      <Play>${timeoutUrl}</Play>
+      <Hangup />
     </Response>
   `
 

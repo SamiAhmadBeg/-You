@@ -26,10 +26,18 @@ export async function POST(req: NextRequest) {
   const aiResponse = await processUtterance(callSid, speechResult)
 
   if (!aiResponse) {
-    // Error occurred
+    // Error occurred - use Fish Audio for error message too
+    const { storeAudio } = await import("@/app/api/tts-audio/[audioId]/route")
+    const errorAudio = await synthesizeSpeech("Sorry, I'm having trouble right now. Call me back in a bit!")
+    const errorAudioId = storeAudio(errorAudio.pcmData)
+    
+    const host = req.headers.get("host") || "localhost:3000"
+    const protocol = host.includes("localhost") ? "http" : "https"
+    const errorUrl = `${protocol}://${host}/api/tts-audio/${errorAudioId}`
+    
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
       <Response>
-        <Say voice="Polly.Matthew-Neural">Sorry, I'm having trouble right now. Please try again later.</Say>
+        <Play>${errorUrl}</Play>
         <Hangup />
       </Response>
     `
@@ -52,13 +60,18 @@ export async function POST(req: NextRequest) {
   const protocol = host.includes("localhost") ? "http" : "https"
   const audioUrl = `${protocol}://${host}/api/tts-audio/${audioId}`
 
+  // Generate Fish Audio goodbye message for timeout
+  const goodbyeAudio = await synthesizeSpeech("Alright, talk soon! Hit me up if you need anything.")
+  const goodbyeAudioId = storeAudio(goodbyeAudio.pcmData)
+  const goodbyeUrl = `${protocol}://${host}/api/tts-audio/${goodbyeAudioId}`
+
   // Continue conversation with <Gather>
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
     <Response>
       <Gather input="speech" action="${protocol}://${host}/api/twilio/gather" speechTimeout="auto" language="en-US">
         <Play>${audioUrl}</Play>
       </Gather>
-      <Say voice="Polly.Matthew-Neural">Thanks for calling! Talk soon.</Say>
+      <Play>${goodbyeUrl}</Play>
       <Hangup />
     </Response>
   `
