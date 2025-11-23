@@ -141,18 +141,9 @@ export function audioToTwilio(pcmData: Buffer, sampleRate: number = 24000): stri
   if (sampleRate === 16000) {
     pcm8khz = downsample16kTo8k(pcmData)
   } else if (sampleRate === 24000) {
-<<<<<<< HEAD
-    // OpenAI TTS PCM format is 24kHz
-    pcm8khz = downsample24kTo8k(pcmData)
-  } else if (sampleRate === 48000) {
-    pcm8khz = downsample48kTo8k(pcmData)
-  } else if (sampleRate !== 8000) {
-    console.warn(`Unsupported sample rate: ${sampleRate}Hz, attempting direct conversion`)
-=======
     pcm8khz = downsample24kTo8k(pcmData)
   } else if (sampleRate === 44100) {
     pcm8khz = downsample44kTo8k(pcmData)
->>>>>>> 0ed4ead62ff3bfaa1f9453ffc56054cd52ec46d0
   }
 
   // Convert PCM to mulaw
