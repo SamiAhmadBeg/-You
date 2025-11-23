@@ -17,30 +17,36 @@ setInterval(() => {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { audioId: string } }
+  context: { params: Promise<{ audioId: string }> }
 ) {
-  const audioId = params.audioId
+  const { audioId } = await context.params
   const cached = audioCache.get(audioId)
 
+  console.log(`🎵 Audio request for ${audioId}: ${cached ? 'found' : 'not found'}`)
+
   if (!cached) {
+    console.error(`❌ Audio ${audioId} not found in cache`)
     return new NextResponse("Audio not found or expired", { status: 404 })
   }
 
+  console.log(`✅ Serving audio ${audioId}: ${cached.buffer.length} bytes`)
   return new NextResponse(cached.buffer, {
     status: 200,
     headers: {
       "Content-Type": "audio/mpeg",
+      "Content-Length": cached.buffer.length.toString(),
       "Cache-Control": "public, max-age=300",
     },
   })
 }
 
 /**
- * Store audio in cache and return the URL
+ * Store audio in cache and return the audio ID
  */
 export function storeAudio(buffer: Buffer): string {
   const audioId = crypto.randomUUID()
   audioCache.set(audioId, { buffer, timestamp: Date.now() })
+  console.log(`💾 Stored audio ${audioId}: ${buffer.length} bytes`)
   return audioId
 }
 
