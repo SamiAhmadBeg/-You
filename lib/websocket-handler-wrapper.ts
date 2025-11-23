@@ -123,7 +123,6 @@ async function handleStart(ws: WebSocket, msg: any): Promise<void> {
 
   try {
     // Generate dynamic greeting using AI
-    const { processUtterance } = await import("./conversation")
     const greeting = await generateDynamicGreeting(callSid, from)
     
     const greetingAudio = await synthesizeSpeech(greeting)
