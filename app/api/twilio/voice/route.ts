@@ -6,6 +6,7 @@ export const runtime = "nodejs"
 export async function POST(req: NextRequest) {
   const formData = await req.formData()
   const from = (formData.get("From") as string) ?? "Unknown"
+  const speechResult = formData.get("SpeechResult") as string | null
 
   const { assistantEnabled, mode } = getState()
 
@@ -24,20 +25,17 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // Connect to WebSocket for real-time streaming
+  // Use <Gather> for HD quality TTS instead of Media Streams
   const host = req.headers.get("host") || "localhost:3000"
-  const protocol = host.includes("localhost") ? "ws" : "wss"
-  const wsUrl = `${protocol}://${host}/api/media-stream`
-
-  console.log(`🔌 Connecting call to WebSocket: ${wsUrl}`)
+  const protocol = host.includes("localhost") ? "http" : "https"
+  const baseUrl = `${protocol}://${host}`
 
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
     <Response>
-      <Connect>
-        <Stream url="${wsUrl}">
-          <Parameter name="From" value="${from}" />
-        </Stream>
-      </Connect>
+      <Gather input="speech" action="${baseUrl}/api/twilio/gather" speechTimeout="auto" language="en-US">
+        <Say voice="Polly.Matthew-Neural">Hey! It's Sami. What's up?</Say>
+      </Gather>
+      <Say>Sorry, I didn't catch that. Please call back.</Say>
     </Response>
   `
 
@@ -46,3 +44,4 @@ export async function POST(req: NextRequest) {
     headers: { "Content-Type": "text/xml" },
   })
 }
+

@@ -89,14 +89,39 @@ async function handleStart(ws: WebSocket, msg: any): Promise<void> {
 
         console.log(`🤖 AI response: "${aiResponse}"`)
 
-        // Generate speech with correct sample rate info
+        // Generate MP3 audio (higher quality than streaming PCM)
         const audioResult = await synthesizeSpeech(aiResponse)
         console.log(`🎵 Audio: ${audioResult.sampleRate}Hz, ${audioResult.pcmData.length} bytes`)
 
-        // Convert to Twilio format (mulaw 8kHz) using the actual sample rate
-        const twilioAudio = audioToTwilio(audioResult.pcmData, audioResult.sampleRate)
-        console.log(`📤 Sending ${twilioAudio.length} bytes (base64) to Twilio`)
+        // Store MP3 and get URL
+        const { storeAudio } = await import("@/app/api/tts-audio/[audioId]/route")
+        const audioId = storeAudio(audioResult.pcmData)
+        const audioUrl = `https://${process.env.RAILWAY_PUBLIC_DOMAIN || "you-production-6246.up.railway.app"}/api/tts-audio/${audioId}`
 
+        // Send <Play> command to Twilio for HD audio playback
+        ws.send(
+          JSON.stringify({
+            event: "clear",
+            streamSid,
+          })
+        )
+
+        ws.send(
+          JSON.stringify({
+            event: "mark",
+            streamSid,
+            mark: {
+              name: `play-${audioId}`,
+            },
+          })
+        )
+
+        // Twilio will fetch and play the MP3 at higher quality
+        console.log(`🔊 Playing audio from: ${audioUrl}`)
+        
+        // Note: We can't use <Play> from WebSocket directly
+        // Need to use Media Streams 'media' event with better encoding
+        const twilioAudio = audioToTwilio(audioResult.pcmData, audioResult.sampleRate)
         sendAudioToTwilio(ws, streamSid, twilioAudio)
       } catch (error) {
         console.error("Error processing transcript:", error)

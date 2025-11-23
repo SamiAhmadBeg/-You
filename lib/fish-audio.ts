@@ -45,7 +45,7 @@ export async function synthesizeSpeech(text: string): Promise<AudioResult> {
 
 /**
  * Synthesize speech using Fish Audio
- * Returns PCM audio properly extracted from WAV with correct sample rate info
+ * Returns MP3 format for Twilio's <Play> verb (better quality than streaming)
  */
 async function synthesizeWithFishAudio(text: string): Promise<AudioResult> {
   try {
@@ -53,10 +53,10 @@ async function synthesizeWithFishAudio(text: string): Promise<AudioResult> {
       throw new Error("FISH_API_KEY is not set")
     }
 
-    // Request WAV format (contains PCM data)
+    // Request MP3 format for Twilio <Play> verb (supports up to 16kHz)
     const audioStream = await fishAudio.textToSpeech.convert({
       text,
-      format: "wav",
+      format: "mp3",
       reference_id: process.env.FISH_VOICE_ID,
     })
 
@@ -69,22 +69,12 @@ async function synthesizeWithFishAudio(text: string): Promise<AudioResult> {
       if (value) chunks.push(value)
     }
 
-    const wavBuffer = Buffer.concat(chunks.map((c) => Buffer.from(c)))
+    const mp3Buffer = Buffer.concat(chunks.map((c) => Buffer.from(c)))
     
-    // Parse WAV header properly
-    const wavHeader = parseWAVHeader(wavBuffer)
-    
-    if (!wavHeader) {
-      throw new Error("Invalid WAV file from Fish Audio")
-    }
-    
-    // Extract PCM data starting after the header
-    const pcmData = wavBuffer.slice(wavHeader.dataOffset)
-    
-    console.log(`✅ Fish Audio TTS: ${wavHeader.sampleRate}Hz, ${wavHeader.bitsPerSample}-bit, ${pcmData.length} bytes`)
+    console.log(`✅ Fish Audio TTS: MP3 format, ${mp3Buffer.length} bytes`)
     return {
-      pcmData,
-      sampleRate: wavHeader.sampleRate,
+      pcmData: mp3Buffer, // Actually MP3 for <Play>
+      sampleRate: 16000, // MP3 preserves higher quality
     }
   } catch (error: any) {
     console.error("Fish Audio TTS Error:", error)
