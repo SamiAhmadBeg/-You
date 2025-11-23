@@ -2,12 +2,11 @@
   "name": "you-ai-dashboard",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint .",
-    "start": "node server.js"
+    "start": "next start"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
