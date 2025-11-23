@@ -155,6 +155,7 @@ export function audioToTwilio(pcmData: Buffer, sampleRate: number = 24000): stri
 
 /**
  * Downsample audio from 44.1kHz to 8kHz (Fish Audio WAV output)
+ * Uses low-pass filtering to remove static and aliasing
  * @param pcm44khz - PCM 16-bit audio at 44.1kHz
  * @returns PCM 16-bit audio at 8kHz
  */
@@ -164,18 +165,28 @@ function downsample44kTo8k(pcm44khz: Buffer): Buffer {
   const outputSamples = Math.floor(inputSamples / ratio)
   const output = Buffer.alloc(outputSamples * 2)
 
+  // Simple 3-tap low-pass filter to reduce aliasing
   for (let i = 0; i < outputSamples; i++) {
     const srcIndex = i * ratio
     const srcIndexFloor = Math.floor(srcIndex)
-    const srcIndexCeil = Math.min(srcIndexFloor + 1, inputSamples - 1)
-    const fraction = srcIndex - srcIndexFloor
-
-    const sample1 = pcm44khz.readInt16LE(srcIndexFloor * 2)
-    const sample2 = pcm44khz.readInt16LE(srcIndexCeil * 2)
-
-    // Linear interpolation
-    const interpolated = Math.round(sample1 + (sample2 - sample1) * fraction)
-    output.writeInt16LE(interpolated, i * 2)
+    
+    // Get 3 samples for filtering
+    const idx0 = Math.max(0, srcIndexFloor - 1) * 2
+    const idx1 = srcIndexFloor * 2
+    const idx2 = Math.min(srcIndexFloor + 1, inputSamples - 1) * 2
+    
+    if (idx2 < pcm44khz.length) {
+      const s0 = pcm44khz.readInt16LE(idx0)
+      const s1 = pcm44khz.readInt16LE(idx1)
+      const s2 = pcm44khz.readInt16LE(idx2)
+      
+      // Apply low-pass filter (weighted average)
+      const filtered = Math.round((s0 * 0.25 + s1 * 0.5 + s2 * 0.25))
+      
+      // Clamp to 16-bit range
+      const clamped = Math.max(-32768, Math.min(32767, filtered))
+      output.writeInt16LE(clamped, i * 2)
+    }
   }
 
   return output
