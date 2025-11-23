@@ -45,7 +45,7 @@ export async function synthesizeSpeech(text: string): Promise<AudioResult> {
 
 /**
  * Synthesize speech using Fish Audio
- * Returns MP3 format for Twilio's <Play> verb (better quality than streaming)
+ * Returns high-quality MP3 for Twilio's <Play> verb
  */
 async function synthesizeWithFishAudio(text: string): Promise<AudioResult> {
   try {
@@ -53,11 +53,14 @@ async function synthesizeWithFishAudio(text: string): Promise<AudioResult> {
       throw new Error("FISH_API_KEY is not set")
     }
 
-    // Request MP3 format for Twilio <Play> verb (supports up to 16kHz)
+    // Request high-quality MP3 format
     const audioStream = await fishAudio.textToSpeech.convert({
       text,
       format: "mp3",
       reference_id: process.env.FISH_VOICE_ID,
+      // Fish Audio API parameters for maximum quality
+      mp3_bitrate: 128, // Higher bitrate = better quality (default is 64)
+      latency: "normal", // "normal" for quality, "balanced" for speed
     })
 
     const reader = audioStream.getReader()
@@ -71,10 +74,10 @@ async function synthesizeWithFishAudio(text: string): Promise<AudioResult> {
 
     const mp3Buffer = Buffer.concat(chunks.map((c) => Buffer.from(c)))
     
-    console.log(`✅ Fish Audio TTS: MP3 format, ${mp3Buffer.length} bytes`)
+    console.log(`✅ Fish Audio TTS: MP3 128kbps, ${mp3Buffer.length} bytes`)
     return {
       pcmData: mp3Buffer, // Actually MP3 for <Play>
-      sampleRate: 16000, // MP3 preserves higher quality
+      sampleRate: 44100, // MP3 preserves full sample rate
     }
   } catch (error: any) {
     console.error("Fish Audio TTS Error:", error)
