@@ -32,9 +32,8 @@ export async function synthesizeSpeech(text: string): Promise<Buffer> {
     const audioStream = await fishAudio.textToSpeech.convert({
       text,
       format: "mp3",
-      // Using default voice (no reference_id specified)
-      // You can add reference_id parameter here if you want a specific voice
-      // Example: reference_id: process.env.FISH_VOICE_ID,
+      // Use your cloned voice if FISH_VOICE_ID is set
+      reference_id: process.env.FISH_VOICE_ID,
     })
 
     // Convert ReadableStream to Buffer
