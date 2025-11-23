@@ -165,9 +165,17 @@ function downsample44kTo8k(pcm44khz: Buffer): Buffer {
   const output = Buffer.alloc(outputSamples * 2)
 
   for (let i = 0; i < outputSamples; i++) {
-    const srcIndex = Math.floor(i * ratio)
-    const sample = pcm44khz.readInt16LE(srcIndex * 2)
-    output.writeInt16LE(sample, i * 2)
+    const srcIndex = i * ratio
+    const srcIndexFloor = Math.floor(srcIndex)
+    const srcIndexCeil = Math.min(srcIndexFloor + 1, inputSamples - 1)
+    const fraction = srcIndex - srcIndexFloor
+
+    const sample1 = pcm44khz.readInt16LE(srcIndexFloor * 2)
+    const sample2 = pcm44khz.readInt16LE(srcIndexCeil * 2)
+
+    // Linear interpolation
+    const interpolated = Math.round(sample1 + (sample2 - sample1) * fraction)
+    output.writeInt16LE(interpolated, i * 2)
   }
 
   return output
@@ -175,17 +183,28 @@ function downsample44kTo8k(pcm44khz: Buffer): Buffer {
 
 /**
  * Downsample audio from 24kHz to 8kHz (OpenAI TTS output)
+ * Uses linear interpolation for better quality
  * @param pcm24khz - PCM 16-bit audio at 24kHz
  * @returns PCM 16-bit audio at 8kHz
  */
 function downsample24kTo8k(pcm24khz: Buffer): Buffer {
   const inputSamples = pcm24khz.length / 2
-  const outputSamples = Math.floor(inputSamples / 3) // 24kHz / 8kHz = 3
+  const ratio = 24000 / 8000 // 3.0
+  const outputSamples = Math.floor(inputSamples / ratio)
   const output = Buffer.alloc(outputSamples * 2)
 
   for (let i = 0; i < outputSamples; i++) {
-    const sample = pcm24khz.readInt16LE(i * 6) // Take every 3rd sample
-    output.writeInt16LE(sample, i * 2)
+    const srcIndex = i * ratio
+    const srcIndexFloor = Math.floor(srcIndex)
+    const srcIndexCeil = Math.min(srcIndexFloor + 1, inputSamples - 1)
+    const fraction = srcIndex - srcIndexFloor
+
+    const sample1 = pcm24khz.readInt16LE(srcIndexFloor * 2)
+    const sample2 = pcm24khz.readInt16LE(srcIndexCeil * 2)
+
+    // Linear interpolation
+    const interpolated = Math.round(sample1 + (sample2 - sample1) * fraction)
+    output.writeInt16LE(interpolated, i * 2)
   }
 
   return output
@@ -193,17 +212,28 @@ function downsample24kTo8k(pcm24khz: Buffer): Buffer {
 
 /**
  * Downsample audio from 16kHz to 8kHz
+ * Uses linear interpolation for better quality
  * @param pcm16khz - PCM 16-bit audio at 16kHz
  * @returns PCM 16-bit audio at 8kHz
  */
 function downsample16kTo8k(pcm16khz: Buffer): Buffer {
   const inputSamples = pcm16khz.length / 2
-  const outputSamples = Math.floor(inputSamples / 2)
+  const ratio = 16000 / 8000 // 2.0
+  const outputSamples = Math.floor(inputSamples / ratio)
   const output = Buffer.alloc(outputSamples * 2)
 
   for (let i = 0; i < outputSamples; i++) {
-    const sample = pcm16khz.readInt16LE(i * 4) // Take every other sample
-    output.writeInt16LE(sample, i * 2)
+    const srcIndex = i * ratio
+    const srcIndexFloor = Math.floor(srcIndex)
+    const srcIndexCeil = Math.min(srcIndexFloor + 1, inputSamples - 1)
+    const fraction = srcIndex - srcIndexFloor
+
+    const sample1 = pcm16khz.readInt16LE(srcIndexFloor * 2)
+    const sample2 = pcm16khz.readInt16LE(srcIndexCeil * 2)
+
+    // Linear interpolation
+    const interpolated = Math.round(sample1 + (sample2 - sample1) * fraction)
+    output.writeInt16LE(interpolated, i * 2)
   }
 
   return output
