@@ -141,12 +141,18 @@ export function audioToTwilio(pcmData: Buffer, sampleRate: number = 24000): stri
   if (sampleRate === 16000) {
     pcm8khz = downsample16kTo8k(pcmData)
   } else if (sampleRate === 24000) {
+<<<<<<< HEAD
     // OpenAI TTS PCM format is 24kHz
     pcm8khz = downsample24kTo8k(pcmData)
   } else if (sampleRate === 48000) {
     pcm8khz = downsample48kTo8k(pcmData)
   } else if (sampleRate !== 8000) {
     console.warn(`Unsupported sample rate: ${sampleRate}Hz, attempting direct conversion`)
+=======
+    pcm8khz = downsample24kTo8k(pcmData)
+  } else if (sampleRate === 44100) {
+    pcm8khz = downsample44kTo8k(pcmData)
+>>>>>>> 0ed4ead62ff3bfaa1f9453ffc56054cd52ec46d0
   }
 
   // Convert PCM to mulaw
@@ -154,6 +160,44 @@ export function audioToTwilio(pcmData: Buffer, sampleRate: number = 24000): stri
 
   // Encode to base64
   return mulawBuffer.toString("base64")
+}
+
+/**
+ * Downsample audio from 44.1kHz to 8kHz (Fish Audio WAV output)
+ * @param pcm44khz - PCM 16-bit audio at 44.1kHz
+ * @returns PCM 16-bit audio at 8kHz
+ */
+function downsample44kTo8k(pcm44khz: Buffer): Buffer {
+  const inputSamples = pcm44khz.length / 2
+  const ratio = 44100 / 8000 // ~5.5125
+  const outputSamples = Math.floor(inputSamples / ratio)
+  const output = Buffer.alloc(outputSamples * 2)
+
+  for (let i = 0; i < outputSamples; i++) {
+    const srcIndex = Math.floor(i * ratio)
+    const sample = pcm44khz.readInt16LE(srcIndex * 2)
+    output.writeInt16LE(sample, i * 2)
+  }
+
+  return output
+}
+
+/**
+ * Downsample audio from 24kHz to 8kHz (OpenAI TTS output)
+ * @param pcm24khz - PCM 16-bit audio at 24kHz
+ * @returns PCM 16-bit audio at 8kHz
+ */
+function downsample24kTo8k(pcm24khz: Buffer): Buffer {
+  const inputSamples = pcm24khz.length / 2
+  const outputSamples = Math.floor(inputSamples / 3) // 24kHz / 8kHz = 3
+  const output = Buffer.alloc(outputSamples * 2)
+
+  for (let i = 0; i < outputSamples; i++) {
+    const sample = pcm24khz.readInt16LE(i * 6) // Take every 3rd sample
+    output.writeInt16LE(sample, i * 2)
+  }
+
+  return output
 }
 
 /**

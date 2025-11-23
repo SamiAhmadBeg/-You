@@ -21,21 +21,26 @@ const fishAudio = new FishAudioClient({
  * @returns Buffer containing the audio data (MP3 format)
  */
 export async function synthesizeSpeech(text: string): Promise<Buffer> {
-  // Try Fish Audio first if Voice ID is set (for voice cloning)
-  if (FISH_API_KEY && process.env.FISH_VOICE_ID) {
+  // Try Fish Audio first (better quality)
+  if (FISH_API_KEY) {
     try {
+      console.log("🎵 Attempting Fish Audio TTS...")
       return await synthesizeWithFishAudio(text)
     } catch (error) {
-      console.error("Fish Audio TTS failed, falling back to OpenAI:", error)
+      console.error("❌ Fish Audio TTS failed, falling back to OpenAI:", error)
     }
+  } else {
+    console.log("⚠️ FISH_API_KEY not set, using OpenAI TTS")
   }
 
-  // Fallback to OpenAI TTS (more reliable for default voices)
+  // Fallback to OpenAI TTS
+  console.log("🔄 Using OpenAI TTS fallback")
   return await synthesizeWithOpenAI(text)
 }
 
 /**
  * Synthesize speech using Fish Audio
+ * Returns PCM audio extracted from WAV
  */
 async function synthesizeWithFishAudio(text: string): Promise<Buffer> {
   try {
@@ -43,9 +48,10 @@ async function synthesizeWithFishAudio(text: string): Promise<Buffer> {
       throw new Error("FISH_API_KEY is not set")
     }
 
+    // Request WAV format (contains PCM data)
     const audioStream = await fishAudio.textToSpeech.convert({
       text,
-      format: "mp3",
+      format: "wav",
       reference_id: process.env.FISH_VOICE_ID,
     })
 
@@ -58,9 +64,13 @@ async function synthesizeWithFishAudio(text: string): Promise<Buffer> {
       if (value) chunks.push(value)
     }
 
-    const buffer = Buffer.concat(chunks.map((c) => Buffer.from(c)))
-    console.log("✅ Fish Audio TTS successful")
-    return buffer
+    const wavBuffer = Buffer.concat(chunks.map((c) => Buffer.from(c)))
+    
+    // Extract PCM data from WAV (skip 44-byte header)
+    const pcmData = wavBuffer.slice(44)
+    
+    console.log("✅ Fish Audio TTS successful (WAV/PCM format)")
+    return pcmData
   } catch (error: any) {
     console.error("Fish Audio TTS Error:", error)
     throw error
@@ -69,7 +79,11 @@ async function synthesizeWithFishAudio(text: string): Promise<Buffer> {
 
 /**
  * Synthesize speech using OpenAI TTS (fallback)
+<<<<<<< HEAD
  * Returns PCM format for direct Twilio compatibility
+=======
+ * Returns PCM audio for better Twilio compatibility
+>>>>>>> 0ed4ead62ff3bfaa1f9453ffc56054cd52ec46d0
  */
 async function synthesizeWithOpenAI(text: string): Promise<Buffer> {
   try {
@@ -85,10 +99,14 @@ async function synthesizeWithOpenAI(text: string): Promise<Buffer> {
       },
       body: JSON.stringify({
         model: "tts-1",
-        voice: "alloy", // Natural male voice (change to: echo, fable, onyx, nova, shimmer)
+        voice: "echo", // Natural male voice (clearer than alloy)
         input: text,
         speed: 1.0,
+<<<<<<< HEAD
         response_format: "pcm", // Request PCM format for easier conversion
+=======
+        response_format: "pcm", // Request raw PCM instead of MP3
+>>>>>>> 0ed4ead62ff3bfaa1f9453ffc56054cd52ec46d0
       }),
     })
 
@@ -99,7 +117,11 @@ async function synthesizeWithOpenAI(text: string): Promise<Buffer> {
 
     const arrayBuffer = await response.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
+<<<<<<< HEAD
     console.log(`✅ OpenAI TTS successful (PCM format, ${buffer.length} bytes)`)
+=======
+    console.log("✅ OpenAI TTS successful (PCM format)")
+>>>>>>> 0ed4ead62ff3bfaa1f9453ffc56054cd52ec46d0
     return buffer
   } catch (error: any) {
     console.error("OpenAI TTS Error:", error)
