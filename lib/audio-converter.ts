@@ -210,24 +210,6 @@ function downsample16kTo8k(pcm16khz: Buffer): Buffer {
 }
 
 /**
- * Downsample audio from 24kHz to 8kHz (OpenAI TTS default)
- * @param pcm24khz - PCM 16-bit audio at 24kHz
- * @returns PCM 16-bit audio at 8kHz
- */
-function downsample24kTo8k(pcm24khz: Buffer): Buffer {
-  const inputSamples = pcm24khz.length / 2
-  const outputSamples = Math.floor(inputSamples / 3) // 24kHz → 8kHz = divide by 3
-  const output = Buffer.alloc(outputSamples * 2)
-
-  for (let i = 0; i < outputSamples; i++) {
-    const sample = pcm24khz.readInt16LE(i * 6) // Take every 3rd sample
-    output.writeInt16LE(sample, i * 2)
-  }
-
-  return output
-}
-
-/**
  * Downsample audio from 48kHz to 8kHz
  * @param pcm48khz - PCM 16-bit audio at 48kHz
  * @returns PCM 16-bit audio at 8kHz
