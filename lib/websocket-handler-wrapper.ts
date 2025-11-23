@@ -122,7 +122,10 @@ async function handleStart(ws: WebSocket, msg: any): Promise<void> {
   updateSession(callSid, { assemblyAIStream })
 
   try {
-    const greeting = "Hey! Sami here. What's up?"
+    // Generate dynamic greeting using AI
+    const { processUtterance } = await import("./conversation")
+    const greeting = await generateDynamicGreeting(callSid, from)
+    
     const greetingAudio = await synthesizeSpeech(greeting)
     const twilioAudio = audioToTwilio(greetingAudio, 8000)
     sendAudioToTwilio(ws, streamSid, twilioAudio)
@@ -130,6 +133,63 @@ async function handleStart(ws: WebSocket, msg: any): Promise<void> {
     addMessage(callSid, "assistant", greeting)
   } catch (error) {
     console.error("Error sending greeting:", error)
+  }
+}
+
+/**
+ * Generate a dynamic greeting using AI
+ */
+async function generateDynamicGreeting(callSid: string, from: string): Promise<string> {
+  const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+  
+  if (!OPENAI_API_KEY) {
+    return "Hey! Sami here. What's up?"
+  }
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are Sami answering your phone. Generate a natural, casual greeting for an incoming call. Keep it SHORT (5-8 words max). Sound like a real person picking up their phone.
+
+Examples:
+- "Hey! Sami here. What's up?"
+- "Yo, this is Sami!"
+- "Hey, what's going on?"
+- "Sami speaking!"
+- "Yo! What's up?"
+
+Be natural and casual. No formal language.`
+          },
+          {
+            role: "user",
+            content: "Generate a greeting"
+          }
+        ],
+        temperature: 0.9,
+        max_tokens: 20,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const greeting = data.choices?.[0]?.message?.content?.trim()
+
+    return greeting || "Hey! Sami here. What's up?"
+  } catch (error) {
+    console.error("Error generating greeting:", error)
+    return "Hey! Sami here. What's up?"
   }
 }
 
