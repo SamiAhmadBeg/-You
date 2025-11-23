@@ -89,12 +89,12 @@ async function handleStart(ws: WebSocket, msg: any): Promise<void> {
 
         console.log(`🤖 AI response: "${aiResponse}"`)
 
-        // Generate speech (returns PCM 16-bit at 24kHz from OpenAI)
-        const audioBuffer = await synthesizeSpeech(aiResponse)
-        console.log(`🎵 Audio buffer size: ${audioBuffer.length} bytes`)
+        // Generate speech with correct sample rate info
+        const audioResult = await synthesizeSpeech(aiResponse)
+        console.log(`🎵 Audio: ${audioResult.sampleRate}Hz, ${audioResult.pcmData.length} bytes`)
 
-        // Convert PCM 24kHz to mulaw 8kHz for Twilio
-        const twilioAudio = audioToTwilio(audioBuffer, 24000)
+        // Convert to Twilio format (mulaw 8kHz) using the actual sample rate
+        const twilioAudio = audioToTwilio(audioResult.pcmData, audioResult.sampleRate)
         console.log(`📤 Sending ${twilioAudio.length} bytes (base64) to Twilio`)
 
         sendAudioToTwilio(ws, streamSid, twilioAudio)
@@ -102,10 +102,10 @@ async function handleStart(ws: WebSocket, msg: any): Promise<void> {
         console.error("Error processing transcript:", error)
 
         try {
-          const fallbackAudio = await synthesizeSpeech(
+          const fallbackAudioResult = await synthesizeSpeech(
             "I'm sorry, I'm having technical difficulties. Please try again later."
           )
-          const twilioAudio = audioToTwilio(fallbackAudio, 24000)
+          const twilioAudio = audioToTwilio(fallbackAudioResult.pcmData, fallbackAudioResult.sampleRate)
           sendAudioToTwilio(ws, streamSid, twilioAudio)
         } catch (e) {
           console.error("Failed to send fallback message:", e)
@@ -131,8 +131,8 @@ async function handleStart(ws: WebSocket, msg: any): Promise<void> {
     const greeting = await generateDynamicGreeting(callSid, from)
     console.log(`👋 Greeting: "${greeting}"`)
     
-    const greetingAudio = await synthesizeSpeech(greeting)
-    const twilioAudio = audioToTwilio(greetingAudio, 24000) // OpenAI PCM is 24kHz
+    const audioResult = await synthesizeSpeech(greeting)
+    const twilioAudio = audioToTwilio(audioResult.pcmData, audioResult.sampleRate)
     sendAudioToTwilio(ws, streamSid, twilioAudio)
 
     addMessage(callSid, "assistant", greeting)

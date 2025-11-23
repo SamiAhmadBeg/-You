@@ -15,12 +15,17 @@ const fishAudio = new FishAudioClient({
   apiKey: FISH_API_KEY || "",
 })
 
+export interface AudioResult {
+  pcmData: Buffer
+  sampleRate: number
+}
+
 /**
  * Convert text to speech using Fish Audio with OpenAI TTS fallback
  * @param text - The text to convert to speech
- * @returns Buffer containing the audio data (MP3 format)
+ * @returns Audio data with sample rate info
  */
-export async function synthesizeSpeech(text: string): Promise<Buffer> {
+export async function synthesizeSpeech(text: string): Promise<AudioResult> {
   // Try Fish Audio first (better quality)
   if (FISH_API_KEY) {
     try {
@@ -40,9 +45,9 @@ export async function synthesizeSpeech(text: string): Promise<Buffer> {
 
 /**
  * Synthesize speech using Fish Audio
- * Returns PCM audio extracted from WAV
+ * Returns PCM audio properly extracted from WAV with correct sample rate info
  */
-async function synthesizeWithFishAudio(text: string): Promise<Buffer> {
+async function synthesizeWithFishAudio(text: string): Promise<AudioResult> {
   try {
     if (!FISH_API_KEY) {
       throw new Error("FISH_API_KEY is not set")
@@ -66,11 +71,21 @@ async function synthesizeWithFishAudio(text: string): Promise<Buffer> {
 
     const wavBuffer = Buffer.concat(chunks.map((c) => Buffer.from(c)))
     
-    // Extract PCM data from WAV (skip 44-byte header)
-    const pcmData = wavBuffer.slice(44)
+    // Parse WAV header properly
+    const wavHeader = parseWAVHeader(wavBuffer)
     
-    console.log("✅ Fish Audio TTS successful (WAV/PCM format)")
-    return pcmData
+    if (!wavHeader) {
+      throw new Error("Invalid WAV file from Fish Audio")
+    }
+    
+    // Extract PCM data starting after the header
+    const pcmData = wavBuffer.slice(wavHeader.dataOffset)
+    
+    console.log(`✅ Fish Audio TTS: ${wavHeader.sampleRate}Hz, ${wavHeader.bitsPerSample}-bit, ${pcmData.length} bytes`)
+    return {
+      pcmData,
+      sampleRate: wavHeader.sampleRate,
+    }
   } catch (error: any) {
     console.error("Fish Audio TTS Error:", error)
     throw error
@@ -78,10 +93,54 @@ async function synthesizeWithFishAudio(text: string): Promise<Buffer> {
 }
 
 /**
+ * Parse WAV file header to find the actual data offset
+ */
+function parseWAVHeader(buffer: Buffer): { sampleRate: number; bitsPerSample: number; dataOffset: number } | null {
+  // Check for RIFF header
+  if (buffer.length < 44 || buffer.toString('ascii', 0, 4) !== 'RIFF') {
+    return null
+  }
+
+  // Check for WAVE format
+  if (buffer.toString('ascii', 8, 12) !== 'WAVE') {
+    return null
+  }
+
+  let offset = 12
+  let sampleRate = 0
+  let bitsPerSample = 0
+  let dataOffset = 0
+
+  // Find fmt and data chunks
+  while (offset < buffer.length - 8) {
+    const chunkId = buffer.toString('ascii', offset, offset + 4)
+    const chunkSize = buffer.readUInt32LE(offset + 4)
+
+    if (chunkId === 'fmt ') {
+      // Parse fmt chunk
+      sampleRate = buffer.readUInt32LE(offset + 12)
+      bitsPerSample = buffer.readUInt16LE(offset + 22)
+    } else if (chunkId === 'data') {
+      // Found data chunk
+      dataOffset = offset + 8
+      break
+    }
+
+    offset += 8 + chunkSize
+  }
+
+  if (dataOffset === 0 || sampleRate === 0) {
+    return null
+  }
+
+  return { sampleRate, bitsPerSample, dataOffset }
+}
+
+/**
  * Synthesize speech using OpenAI TTS (fallback)
  * Returns PCM audio optimized for phone calls
  */
-async function synthesizeWithOpenAI(text: string): Promise<Buffer> {
+async function synthesizeWithOpenAI(text: string): Promise<AudioResult> {
   try {
     if (!OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is not set")
@@ -110,7 +169,10 @@ async function synthesizeWithOpenAI(text: string): Promise<Buffer> {
     const arrayBuffer = await response.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
     console.log("✅ OpenAI TTS-HD successful (PCM format)")
-    return buffer
+    return {
+      pcmData: buffer,
+      sampleRate: 24000, // OpenAI TTS PCM is 24kHz
+    }
   } catch (error: any) {
     console.error("OpenAI TTS Error:", error)
     throw new Error(error?.message || "Failed to generate speech")
