@@ -2,7 +2,7 @@ import { createServer } from "http"
 import { parse } from "url"
 import next from "next"
 import { WebSocketServer } from "ws"
-import { handleTwilioWebSocket } from "./lib/websocket-handler"
+import { handleTwilioWebSocket } from "./lib/websocket-handler.js"
 
 const dev = process.env.NODE_ENV !== "production"
 const hostname = "0.0.0.0"
