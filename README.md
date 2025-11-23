@@ -4,7 +4,7 @@
 
 ### *Not you picking up, so YOU don't miss what matters!*
 
-[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Railway-9b59b6?style=for-the-badge)](https://you-production-6246.up.railway.app/)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Railway-9b59b6?style=for-the-badge)](https://you-production-6246.up.railway.app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Next.js](https://img.shields.io/badge/Next.js-16.0-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-22+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -19,24 +19,24 @@
 
 ---
 
-## 📞 Quick Start
+## Quick Start
 
 ### Try the Live Demo
 
-1. **Call the AI**: `📱 866-825-4384`
+1. **Call the AI**: `866-825-4384`
 2. **Dashboard**: [https://you-production-6246.up.railway.app/](https://you-production-6246.up.railway.app/)
 
 Experience real-time AI conversations powered by cutting-edge speech and language models.
 
 ---
 
-## ✨ Features
+## Features
 
 <table>
 <tr>
 <td width="50%">
 
-### 🤖 **Intelligent Conversations**
+### **Intelligent Conversations**
 - Real-time speech recognition with **AssemblyAI**
 - Natural language processing via **OpenAI GPT-4o-mini**
 - Context-aware responses
@@ -44,7 +44,7 @@ Experience real-time AI conversations powered by cutting-edge speech and languag
 </td>
 <td width="50%">
 
-### 🎙️ **Neural Voice Synthesis**
+### **Neural Voice Synthesis**
 - High-fidelity TTS with **Fish Audio**
 - OpenAI TTS fallback
 - Custom voice cloning support
@@ -54,7 +54,7 @@ Experience real-time AI conversations powered by cutting-edge speech and languag
 <tr>
 <td>
 
-### 📊 **Call Management**
+### **Call Management**
 - Live call monitoring dashboard
 - Complete conversation transcripts
 - AI-generated call summaries
@@ -62,7 +62,7 @@ Experience real-time AI conversations powered by cutting-edge speech and languag
 </td>
 <td>
 
-### ⚡ **Real-Time Streaming**
+### **Real-Time Streaming**
 - WebSocket-based audio streaming
 - Low-latency voice processing
 - Seamless Twilio integration
@@ -117,20 +117,20 @@ Experience real-time AI conversations powered by cutting-edge speech and languag
 ### Audio Pipeline
 
 ```
-Twilio (mulaw 8kHz) → PCM 16kHz → AssemblyAI (STT)
-                                        ↓
-                                   Transcript
-                                        ↓
-                                  OpenAI LLM
-                                        ↓
-                                   AI Response
-                                        ↓
+       Twilio (mulaw 8kHz) → PCM 16kHz → AssemblyAI (STT)
+                             ↓
+                        Transcript
+                             ↓
+                        OpenAI LLM
+                             ↓
+                        AI Response
+                             ↓
 Fish Audio/OpenAI TTS → PCM 24kHz → Downsample 8kHz → mulaw → Twilio
 ```
 
 ---
 
-## 🚀 Installation
+## Installation
 
 ### Prerequisites
 
@@ -167,9 +167,6 @@ Create a `.env.local` file in the root directory:
 ```bash
 # OpenAI API Key (for LLM responses and TTS fallback)
 OPENAI_API_KEY=sk-your-openai-api-key
-
-# AssemblyAI API Key (for real-time speech-to-text)
-ASSEMBLYAI_API_KEY=your-assemblyai-api-key
 
 # Fish Audio API Key (for neural TTS)
 FISH_API_KEY=your-fish-audio-api-key
@@ -210,7 +207,7 @@ RAILWAY_PUBLIC_DOMAIN=your-app.up.railway.app
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 <table>
 <tr>
@@ -251,7 +248,7 @@ RAILWAY_PUBLIC_DOMAIN=your-app.up.railway.app
 
 ---
 
-## 📡 API Routes
+## API Routes
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -265,7 +262,7 @@ RAILWAY_PUBLIC_DOMAIN=your-app.up.railway.app
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ### Test Individual Services
 
@@ -283,7 +280,7 @@ Visit these pages in your browser:
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 <details>
 <summary><b>Audio is garbled or noisy</b></summary>
@@ -323,44 +320,18 @@ Visit these pages in your browser:
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-<table>
-<tr>
-<td align="center" width="25%">
-<img src="https://fish.audio/logo.svg" width="80" height="80" alt="Fish Audio"/><br/>
-<b>Fish Audio</b><br/>
-<sub>Project Sponsor</sub><br/>
-<sub>Neural TTS Provider</sub>
-</td>
-<td align="center" width="25%">
-<img src="https://www.assemblyai.com/favicon.svg" width="80" height="80" alt="AssemblyAI"/><br/>
-<b>AssemblyAI</b><br/>
-<sub>Real-time STT</sub>
-</td>
-<td align="center" width="25%">
-<img src="https://openai.com/favicon.ico" width="80" height="80" alt="OpenAI"/><br/>
-<b>OpenAI</b><br/>
-<sub>LLM & TTS</sub>
-</td>
-<td align="center" width="25%">
-<img src="https://www.twilio.com/favicon.ico" width="80" height="80" alt="Twilio"/><br/>
-<b>Twilio</b><br/>
-<sub>Voice Infrastructure</sub>
-</td>
-</tr>
-</table>
+**Special thanks to [Fish Audio](https://fish.audio/) for sponsoring this MadHacks project!**
 
 <div align="center">
-
-**Special thanks to [Fish Audio](https://fish.audio/) for sponsoring this MadHacks project! 🐟**
-
+       
 ---
 
 Made with ❤️ for **MadHacks 2025**
