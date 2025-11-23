@@ -1,12 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getState } from "@/lib/state"
+import { synthesizeSpeech } from "@/lib/fish-audio"
+import { generateDynamicGreeting } from "@/lib/conversation"
+import { createSession } from "@/lib/call-session"
 
 export const runtime = "nodejs"
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData()
   const from = (formData.get("From") as string) ?? "Unknown"
-  const speechResult = formData.get("SpeechResult") as string | null
+  const callSid = (formData.get("CallSid") as string) ?? "unknown"
 
   const { assistantEnabled, mode } = getState()
 
@@ -25,17 +28,30 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // Use <Gather> for HD quality TTS instead of Media Streams
+  // Create session for this call
+  createSession(callSid, from)
+
+  // Generate greeting using Fish Audio
+  const greeting = await generateDynamicGreeting(callSid, from)
+  const audioResult = await synthesizeSpeech(greeting)
+
+  // Store audio and get URL
+  const { storeAudio } = await import("@/app/api/tts-audio/[audioId]/route")
+  const audioId = storeAudio(audioResult.pcmData)
+
   const host = req.headers.get("host") || "localhost:3000"
   const protocol = host.includes("localhost") ? "http" : "https"
   const baseUrl = `${protocol}://${host}`
+  const audioUrl = `${baseUrl}/api/tts-audio/${audioId}`
+
+  console.log(`🎵 Greeting audio URL: ${audioUrl}`)
 
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
     <Response>
       <Gather input="speech" action="${baseUrl}/api/twilio/gather" speechTimeout="auto" language="en-US">
-        <Say voice="Polly.Matthew-Neural">Hey! It's Sami. What's up?</Say>
+        <Play>${audioUrl}</Play>
       </Gather>
-      <Say>Sorry, I didn't catch that. Please call back.</Say>
+      <Say voice="Polly.Matthew-Neural">Sorry, I didn't catch that. Please call back.</Say>
     </Response>
   `
 

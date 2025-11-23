@@ -165,6 +165,61 @@ Work this into the conversation naturally.`
 }
 
 /**
+ * Generate a dynamic greeting for incoming calls
+ */
+export async function generateDynamicGreeting(callId: string, from: string): Promise<string> {
+  if (!OPENAI_API_KEY) {
+    return "Hey! Sami here. What's up?"
+  }
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are Sami answering your phone. Generate a natural, casual greeting for an incoming call. Keep it SHORT (5-8 words max). Sound like a real person picking up their phone.
+
+Examples:
+- "Hey! Sami here. What's up?"
+- "Yo, this is Sami!"
+- "Hey, what's going on?"
+- "Sami speaking!"
+- "Yo! What's up?"
+
+Be natural and casual. No formal language.`
+          },
+          {
+            role: "user",
+            content: "Generate a greeting"
+          }
+        ],
+        temperature: 0.9,
+        max_tokens: 20,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const greeting = data.choices?.[0]?.message?.content?.trim()
+
+    return greeting || "Hey! Sami here. What's up?"
+  } catch (error) {
+    console.error("Error generating greeting:", error)
+    return "Hey! Sami here. What's up?"
+  }
+}
+
+/**
  * Generate a summary of the call
  * @param callId - The call session ID
  * @returns A summary of the conversation
