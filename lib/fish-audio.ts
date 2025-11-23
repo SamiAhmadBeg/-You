@@ -69,6 +69,7 @@ async function synthesizeWithFishAudio(text: string): Promise<Buffer> {
 
 /**
  * Synthesize speech using OpenAI TTS (fallback)
+ * Returns PCM format for direct Twilio compatibility
  */
 async function synthesizeWithOpenAI(text: string): Promise<Buffer> {
   try {
@@ -87,6 +88,7 @@ async function synthesizeWithOpenAI(text: string): Promise<Buffer> {
         voice: "alloy", // Natural male voice (change to: echo, fable, onyx, nova, shimmer)
         input: text,
         speed: 1.0,
+        response_format: "pcm", // Request PCM format for easier conversion
       }),
     })
 
@@ -97,7 +99,7 @@ async function synthesizeWithOpenAI(text: string): Promise<Buffer> {
 
     const arrayBuffer = await response.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
-    console.log("✅ OpenAI TTS successful")
+    console.log(`✅ OpenAI TTS successful (PCM format, ${buffer.length} bytes)`)
     return buffer
   } catch (error: any) {
     console.error("OpenAI TTS Error:", error)

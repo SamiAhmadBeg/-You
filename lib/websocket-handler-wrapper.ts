@@ -89,8 +89,13 @@ async function handleStart(ws: WebSocket, msg: any): Promise<void> {
 
         console.log(`🤖 AI response: "${aiResponse}"`)
 
+        // Generate speech (returns PCM 16-bit at 24kHz from OpenAI)
         const audioBuffer = await synthesizeSpeech(aiResponse)
-        const twilioAudio = audioToTwilio(audioBuffer, 8000)
+        console.log(`🎵 Audio buffer size: ${audioBuffer.length} bytes`)
+
+        // Convert PCM 24kHz to mulaw 8kHz for Twilio
+        const twilioAudio = audioToTwilio(audioBuffer, 24000)
+        console.log(`📤 Sending ${twilioAudio.length} bytes (base64) to Twilio`)
 
         sendAudioToTwilio(ws, streamSid, twilioAudio)
       } catch (error) {
@@ -100,7 +105,7 @@ async function handleStart(ws: WebSocket, msg: any): Promise<void> {
           const fallbackAudio = await synthesizeSpeech(
             "I'm sorry, I'm having technical difficulties. Please try again later."
           )
-          const twilioAudio = audioToTwilio(fallbackAudio, 8000)
+          const twilioAudio = audioToTwilio(fallbackAudio, 24000)
           sendAudioToTwilio(ws, streamSid, twilioAudio)
         } catch (e) {
           console.error("Failed to send fallback message:", e)
@@ -124,9 +129,10 @@ async function handleStart(ws: WebSocket, msg: any): Promise<void> {
   try {
     // Generate dynamic greeting using AI
     const greeting = await generateDynamicGreeting(callSid, from)
+    console.log(`👋 Greeting: "${greeting}"`)
     
     const greetingAudio = await synthesizeSpeech(greeting)
-    const twilioAudio = audioToTwilio(greetingAudio, 8000)
+    const twilioAudio = audioToTwilio(greetingAudio, 24000) // OpenAI PCM is 24kHz
     sendAudioToTwilio(ws, streamSid, twilioAudio)
 
     addMessage(callSid, "assistant", greeting)

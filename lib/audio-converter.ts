@@ -134,12 +134,19 @@ export function twilioToAssemblyAI(base64Mulaw: string): Buffer {
  * @param sampleRate - Current sample rate of the audio (will be resampled to 8kHz if needed)
  * @returns Base64-encoded mulaw audio
  */
-export function audioToTwilio(pcmData: Buffer, sampleRate: number = 8000): string {
+export function audioToTwilio(pcmData: Buffer, sampleRate: number = 24000): string {
   let pcm8khz = pcmData
 
-  // If input is 16kHz, downsample to 8kHz
+  // Resample to 8kHz if needed
   if (sampleRate === 16000) {
     pcm8khz = downsample16kTo8k(pcmData)
+  } else if (sampleRate === 24000) {
+    // OpenAI TTS PCM format is 24kHz
+    pcm8khz = downsample24kTo8k(pcmData)
+  } else if (sampleRate === 48000) {
+    pcm8khz = downsample48kTo8k(pcmData)
+  } else if (sampleRate !== 8000) {
+    console.warn(`Unsupported sample rate: ${sampleRate}Hz, attempting direct conversion`)
   }
 
   // Convert PCM to mulaw
@@ -161,6 +168,42 @@ function downsample16kTo8k(pcm16khz: Buffer): Buffer {
 
   for (let i = 0; i < outputSamples; i++) {
     const sample = pcm16khz.readInt16LE(i * 4) // Take every other sample
+    output.writeInt16LE(sample, i * 2)
+  }
+
+  return output
+}
+
+/**
+ * Downsample audio from 24kHz to 8kHz (OpenAI TTS default)
+ * @param pcm24khz - PCM 16-bit audio at 24kHz
+ * @returns PCM 16-bit audio at 8kHz
+ */
+function downsample24kTo8k(pcm24khz: Buffer): Buffer {
+  const inputSamples = pcm24khz.length / 2
+  const outputSamples = Math.floor(inputSamples / 3) // 24kHz → 8kHz = divide by 3
+  const output = Buffer.alloc(outputSamples * 2)
+
+  for (let i = 0; i < outputSamples; i++) {
+    const sample = pcm24khz.readInt16LE(i * 6) // Take every 3rd sample
+    output.writeInt16LE(sample, i * 2)
+  }
+
+  return output
+}
+
+/**
+ * Downsample audio from 48kHz to 8kHz
+ * @param pcm48khz - PCM 16-bit audio at 48kHz
+ * @returns PCM 16-bit audio at 8kHz
+ */
+function downsample48kTo8k(pcm48khz: Buffer): Buffer {
+  const inputSamples = pcm48khz.length / 2
+  const outputSamples = Math.floor(inputSamples / 6) // 48kHz → 8kHz = divide by 6
+  const output = Buffer.alloc(outputSamples * 2)
+
+  for (let i = 0; i < outputSamples; i++) {
+    const sample = pcm48khz.readInt16LE(i * 12) // Take every 6th sample
     output.writeInt16LE(sample, i * 2)
   }
 
