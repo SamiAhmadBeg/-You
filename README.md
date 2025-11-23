@@ -6,16 +6,9 @@
 
 ### *Not you picking up, so YOU don't miss what matters!*
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Railway-9b59b6?style=for-the-badge)](https://you-production-6246.up.railway.app/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![Next.js](https://img.shields.io/badge/Next.js-16.0-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-22+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-
 ---
 
 **An AI-powered voice assistant that automatically answers phone calls, conducts natural conversations, and stores transcripts in real-time.**
-
-[**Try it now**](#-quick-start) • [Features](#-features) • [Architecture](#-architecture) • [Setup](#-installation)
 
 </div>
 
