@@ -90,9 +90,8 @@ async function handleStart(ws: WebSocket, msg: any): Promise<void> {
         console.log(`🤖 AI response: "${aiResponse}"`)
 
         const audioBuffer = await synthesizeSpeech(aiResponse)
-        // Fish Audio WAV is 44.1kHz, OpenAI PCM is 24kHz
-        // Auto-detect and convert appropriately
-        const twilioAudio = audioToTwilio(audioBuffer, 44100)
+        // Use 24kHz for OpenAI, 44.1kHz for Fish Audio
+        const twilioAudio = audioToTwilio(audioBuffer, 24000)
 
         sendAudioToTwilio(ws, streamSid, twilioAudio)
       } catch (error) {
@@ -128,8 +127,7 @@ async function handleStart(ws: WebSocket, msg: any): Promise<void> {
     const greeting = await generateDynamicGreeting(callSid, from)
     
     const greetingAudio = await synthesizeSpeech(greeting)
-    // Fish Audio WAV is 44.1kHz
-    const twilioAudio = audioToTwilio(greetingAudio, 44100)
+    const twilioAudio = audioToTwilio(greetingAudio, 24000)
     sendAudioToTwilio(ws, streamSid, twilioAudio)
 
     addMessage(callSid, "assistant", greeting)
